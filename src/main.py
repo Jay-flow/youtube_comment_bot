@@ -1,11 +1,12 @@
-from selenium import webdriver
+from datetime import datetime
+from time import sleep
+
+from selenium.common.exceptions import NoSuchElementException
+
 from browser import Browser
 from config import GOOGLE_PW, GOOGLE_ID, COMMENT
-from selenium.webdriver.support import expected_conditions
-from time import sleep
-from model.video import Video
-from datetime import datetime
 from model.enums import Language
+from model.video import Video
 
 
 class Main(Browser):
@@ -19,6 +20,7 @@ class Main(Browser):
         self.index = 0
 
     def process(self):
+        self.chrome_options.add_argument("--start-maximized")
         self.start_chrome()
         self.login()
         self.click_videos()
@@ -44,16 +46,24 @@ class Main(Browser):
                 videos = self.web_driver.find_elements_by_tag_name("ytd-grid-video-renderer")
                 video = videos[self.index]
                 video.click()
+                sleep(2)
+                self.mute_sound()
                 self.insert_comment()
                 self.insert_video_info_into_db()
                 self.web_driver.back()
                 self.index += 1
-                # sleep(1)
+                # sleep(3)
             except IndexError as e:
-                break
+                self.save_web_page("page")
+
+    def mute_sound(self):
+        try:
+            mute_button = self.web_driver.find_element_by_css_selector("button[aria-label='Mute (m)']")
+            mute_button.click()
+        except NoSuchElementException:
+            return False
 
     def insert_comment(self):
-        sleep(2)
         self.web_driver.execute_script("window.scrollTo(0, 500)")
         self.web_driver_wait((self.By.TAG_NAME, "ytd-comment-simplebox-renderer"))
         comment_box = self.web_driver.find_element_by_tag_name("ytd-comment-simplebox-renderer")
@@ -61,8 +71,9 @@ class Main(Browser):
         self.web_driver_wait((self.By.ID, "contenteditable-root"))
         comment_input = self.web_driver.find_element_by_id("contenteditable-root")
         comment_input.send_keys(COMMENT)
-        self.web_driver_wait((self.By.CSS_SELECTOR, "paper-button[aria-label='Comment']"))
-        comment_button = self.web_driver.find_element_by_css_selector("paper-button[aria-label='Comment']")
+        comment_text = "Comment" if self.language == Language.EN else "댓글"
+        self.web_driver_wait((self.By.CSS_SELECTOR, f"paper-button[aria-label='{comment_text}']"))
+        comment_button = self.web_driver.find_element_by_css_selector(f"paper-button[aria-label='{comment_text}']")
         # comment_button.click()
 
     def insert_video_info_into_db(self):

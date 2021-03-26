@@ -19,6 +19,7 @@ class Browser(metaclass=ABCMeta):
         self.By = By
         self.__url = None
         self.__web_driver: Optional[webdriver.Chrome] = None
+        self.chrome_options = webdriver.ChromeOptions()
 
     @property
     def web_driver(self):
@@ -41,22 +42,15 @@ class Browser(metaclass=ABCMeta):
 
     def start_chrome(
             self,
-            show_window: bool = True,
+            chrome_options=None
     ):
-        chrome_options = self.__set_chrome_options(show_window)
         try:
-            web_driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=chrome_options)
+            web_driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=self.chrome_options)
             web_driver.get(self.url)
             self.__web_driver = web_driver
             return self
         except PermissionError:
-            return self.start_chrome(show_window)
-
-    def __set_chrome_options(self, show_window: bool):
-        chrome_options = webdriver.ChromeOptions()
-        if not show_window:
-            chrome_options.add_argument("--headless")
-        return chrome_options
+            return self.start_chrome(chrome_options)
 
     def clear_child_window(self, remain_url=None) -> None:
         is_exist_child = 1 < len(self.__web_driver.window_handles)
@@ -138,3 +132,7 @@ class Browser(metaclass=ABCMeta):
             return True
         except NoSuchElementException:
             return False
+
+    def save_web_page(self, title):
+        with open(f"{title}.html", "w", encoding="utf8") as f:
+            f.write(self.web_driver.page_source)
