@@ -98,4 +98,4 @@ class Main(Browser):
 
 
 if __name__ == '__main__':
-    Main(Language.KO).process()
+    Main(Language.EN).process()
